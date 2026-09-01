@@ -19,14 +19,12 @@ builder.Services.AddOpenApi();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// Liberado para funcionar tanto em Desenvolvimento quanto em Produção (Render)
+app.MapOpenApi();
 
 app.UseHttpsRedirection();
 
-// 2. ATENÇÃO: Habilita servir arquivos estáticos da pasta wwwroot (HTML, CSS, JS)
+// 2. Habilita servir arquivos estáticos da pasta wwwroot (HTML, CSS, JS)
 app.UseStaticFiles();
 
 // 3. O CORS deve ser ativado antes de UseAuthorization e MapControllers
