@@ -10,5 +10,8 @@ RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 EXPOSE 8080
+
+# Copia os arquivos publicados da API e garante a estrutura do wwwroot
 COPY --from=build /app/publish .
+
 ENTRYPOINT ["dotnet", "Renata_Doces.dll"]
