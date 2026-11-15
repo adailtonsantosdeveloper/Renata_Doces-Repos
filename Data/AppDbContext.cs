@@ -1,11 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Renata_Doces.Models;
-/* using System.Collections.Generic; */
 
 namespace Renata_Doces.Data
 {
     public class AppDbContext : DbContext
     {
+        // A connection string NÃO fica mais aqui: ela é registrada no Program.cs (AddDbContext)
+        // a partir da configuração. Isso permite usar bancos diferentes por ambiente sem recompilar.
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
@@ -16,17 +17,8 @@ namespace Renata_Doces.Data
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<PedidoItem> PedidoItens { get; set; }
 
-        // === ADICIONE ESTE MÉTODO AQUI ===
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                optionsBuilder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=RenataDocesDb;Trusted_Connection=True;MultipleActiveResultSets=true");
-            }
-        }
-        // ===================================
-
         // Configurando precisão para campos de dinheiro/preço
+        // (mantido idêntico ao model snapshot das migrations existentes).
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

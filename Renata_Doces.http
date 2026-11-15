@@ -1,6 +1,66 @@
-@Renata_Doces_HostAddress = http://localhost:5167
+@host = http://localhost:5167
 
-GET {{Renata_Doces_HostAddress}}/weatherforecast/
-Accept: application/json
+# Teste de ponta a ponta da API (Visual Studio 2022 17.8+: botão "Enviar solicitação" em cada bloco).
+# Rode na ordem. Troque USUARIO/SENHA pelos valores configurados em "Manage User Secrets".
+# Se o seu Visual Studio não reaproveitar o cookie de sessão entre as chamadas, faça o mesmo teste
+# pelo navegador (a tela já usa esta mesma API). Em Development, a descrição OpenAPI fica em /openapi/v1.json
+
+### 1) Saúde: confirma que o app está de pé E conectado ao banco (esperado: 200 {"status":"ok"})
+GET {{host}}/health
+
+### 2) Sem login a API deve negar (esperado: 401)
+GET {{host}}/api/clientes
+
+### 3) Login (esperado: 200 e cookie "renata.auth"). Errar a senha 6x em 1 minuto deve dar 429.
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "usuario": "USUARIO", "senha": "SENHA" }
+
+### 4) Cadastrar cliente (esperado: 201)
+POST {{host}}/api/clientes
+Content-Type: application/json
+
+{ "nome": "Maria da Silva", "telefone": "(21) 99999-0000", "email": "maria@exemplo.com", "endereco": "Rua das Flores, 10" }
+
+### 5) Validação: nome vazio (esperado: 400 com a mensagem em português)
+POST {{host}}/api/clientes
+Content-Type: application/json
+
+{ "nome": "", "telefone": "abc" }
+
+### 6) Cadastrar produto (esperado: 201)
+POST {{host}}/api/produtos
+Content-Type: application/json
+
+{ "codigo": "BRIG01", "nome": "Brigadeiro gourmet", "sabor": "Chocolate", "recheio": "", "peso": "30 g", "precoVenda": 4.50, "ingredientes": "Leite condensado, cacau, manteiga" }
+
+### 7) Código repetido (esperado: 409)
+POST {{host}}/api/produtos
+Content-Type: application/json
+
+{ "codigo": "BRIG01", "nome": "Outro", "precoVenda": 5 }
+
+### 8) Listar produtos e clientes (anote os ids)
+GET {{host}}/api/produtos
 
 ###
+GET {{host}}/api/clientes
+
+### 9) Criar pedido (ajuste clienteId/produtoId; esperado: 201 com total = preço do cadastro x quantidade)
+POST {{host}}/api/pedidos
+Content-Type: application/json
+
+{ "clienteId": 1, "itens": [ { "produtoId": 1, "quantidade": 10 } ] }
+
+### 10) Listar pedidos (esperado: 200, sem erro de referência circular)
+GET {{host}}/api/pedidos
+
+### 11) Excluir cliente que tem pedido (esperado: 409; o histórico NÃO pode ser apagado)
+DELETE {{host}}/api/clientes/1
+
+### 12) Excluir produto já vendido (esperado: 409)
+DELETE {{host}}/api/produtos/1
+
+### 13) Sair
+POST {{host}}/api/auth/logout

@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# --- Segredos locais: nunca versionar ---
+secrets.json
+appsettings.*.local.json
+.env
+*.pfx

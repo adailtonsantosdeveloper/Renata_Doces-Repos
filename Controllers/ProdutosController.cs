@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Renata_Doces.Common;
 using Renata_Doces.Data;
+using Renata_Doces.DTOs;
 using Renata_Doces.Models;
 
 namespace Renata_Doces.Controllers
@@ -16,18 +18,23 @@ namespace Renata_Doces.Controllers
             _context = context;
         }
 
-        // GET: api/produtos (Lista todos para a busca na TextBoxList)
+        // GET: api/produtos
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos()
+        public async Task<ActionResult<IEnumerable<Produto>>> GetProdutos(CancellationToken cancellationToken)
         {
-            return await _context.Produtos.ToListAsync();
+            return await _context.Produtos
+                .AsNoTracking()
+                .OrderBy(p => p.Nome)
+                .ToListAsync(cancellationToken);
         }
 
-        // GET: api/produtos/5 (Busca um produto específico pelo ID)
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Produto>> GetProduto(int id)
+        // GET: api/produtos/5
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<Produto>> GetProduto(int id, CancellationToken cancellationToken)
         {
-            var produto = await _context.Produtos.FindAsync(id);
+            var produto = await _context.Produtos
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
             if (produto == null)
             {
@@ -37,60 +44,80 @@ namespace Renata_Doces.Controllers
             return produto;
         }
 
-        // POST: api/produtos (Cadastra um novo produto)
+        // POST: api/produtos
         [HttpPost]
-        public async Task<ActionResult<Produto>> PostProduto(Produto produto)
+        public async Task<ActionResult<Produto>> PostProduto(ProdutoRequest dto, CancellationToken cancellationToken)
         {
+            var codigo = Texto.Limpo(dto.Codigo);
+            if (await _context.Produtos.AnyAsync(p => p.Codigo == codigo, cancellationToken))
+            {
+                return Conflict(new { mensagem = $"Já existe um produto com o código '{codigo}'." });
+            }
+
+            var produto = new Produto();
+            Aplicar(produto, dto);
+
             _context.Produtos.Add(produto);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
             return CreatedAtAction(nameof(GetProduto), new { id = produto.Id }, produto);
         }
 
-        // PUT: api/produtos/5 (Atualiza um produto existente)
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutProduto(int id, Produto produto)
+        // PUT: api/produtos/5
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> PutProduto(int id, ProdutoRequest dto, CancellationToken cancellationToken)
         {
-            if (id != produto.Id)
+            var produto = await _context.Produtos.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+            if (produto == null)
             {
-                return BadRequest(new { mensagem = "O ID do produto não confere." });
+                return NotFound(new { mensagem = "Produto não encontrado para atualização." });
             }
 
-            _context.Entry(produto).State = EntityState.Modified;
-
-            try
+            var codigo = Texto.Limpo(dto.Codigo);
+            if (await _context.Produtos.AnyAsync(p => p.Codigo == codigo && p.Id != id, cancellationToken))
             {
-                await _context.SaveChangesAsync();
+                return Conflict(new { mensagem = $"Já existe outro produto com o código '{codigo}'." });
             }
-            catch (DbUpdateConcurrencyException)
+
+            // Pedidos antigos não mudam: cada item guarda o preço da época da venda (PrecoUnitario).
+            Aplicar(produto, dto);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return NoContent();
+        }
+
+        // DELETE: api/produtos/5
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteProduto(int id, CancellationToken cancellationToken)
+        {
+            // O banco está configurado com exclusão em cascata: sem esta checagem,
+            // apagar o produto removeria os itens dos pedidos antigos e deixaria os totais inconsistentes.
+            if (await _context.PedidoItens.AnyAsync(i => i.ProdutoId == id, cancellationToken))
             {
-                if (!_context.Produtos.Any(e => e.Id == id))
-                {
-                    return NotFound(new { mensagem = "Produto não encontrado para atualização." });
-                }
-                else
-                {
-                    throw;
-                }
+                return Conflict(new { mensagem = "Este produto já foi vendido e não pode ser excluído." });
+            }
+
+            var linhasAfetadas = await _context.Produtos
+                .Where(p => p.Id == id)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            if (linhasAfetadas == 0)
+            {
+                return NotFound(new { mensagem = "Produto não encontrado para exclusão." });
             }
 
             return NoContent();
         }
 
-        // DELETE: api/produtos/5 (Remove o produto do banco)
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduto(int id)
+        private static void Aplicar(Produto produto, ProdutoRequest dto)
         {
-            var produto = await _context.Produtos.FindAsync(id);
-            if (produto == null)
-            {
-                return NotFound(new { mensagem = "Produto não encontrado para exclusão." });
-            }
-
-            _context.Produtos.Remove(produto);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            produto.Codigo = Texto.Limpo(dto.Codigo);
+            produto.Nome = Texto.Limpo(dto.Nome);
+            produto.Sabor = Texto.Limpo(dto.Sabor);
+            produto.Recheio = Texto.Limpo(dto.Recheio);
+            produto.Peso = Texto.Limpo(dto.Peso);
+            produto.PrecoVenda = Math.Round(dto.PrecoVenda, 2, MidpointRounding.AwayFromZero);
+            produto.Ingredientes = Texto.Limpo(dto.Ingredientes);
         }
     }
 }

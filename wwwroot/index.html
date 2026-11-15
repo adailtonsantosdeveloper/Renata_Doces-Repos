@@ -2,163 +2,207 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Renata Doces - Gestão de Vendas</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- viewport-fit=cover: usa a tela toda do iPhone (notch/barra inferior) respeitando as áreas seguras -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#fdfbf7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#161214" media="(prefers-color-scheme: dark)">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="Gestão de clientes, produtos e pedidos da Renata Doces">
+
+    <!-- "Adicionar à Tela de Início" no iPhone: abre como um aplicativo -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Renata Doces">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+
+    <title>Renata Doces</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>🍰 Renata Doces</h1>
-            <p>Sistema de Gestão de Vendas e Pedidos</p>
-        </header>
-
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('clientes', event)">Clientes</button>
-            <button class="tab-btn" onclick="switchTab('produtos', event)">Produtos</button>
-            <button class="tab-btn" onclick="switchTab('pedidos', event)">Pedidos</button>
-        </div>
-
-        <!-- ABA CLIENTES -->
-        <div id="clientes" class="tab-content active">
-            <h2>Gerenciar Clientes</h2>
-            <form id="clienteForm" onsubmit="salvarCliente(event)">
-                <input type="hidden" id="clienteId">
-                <div>
-                    <label>Código / ID (Somente Leitura):</label>
-                    <input type="text" id="clienteIdDisplay" readonly placeholder="Gerado automaticamente">
-                </div>
-                <div>
-                    <label>Nome:</label>
-                    <input type="text" id="clienteNome" required>
-                </div>
-                <div>
-                    <label>Telefone:</label>
-                    <input type="text" id="clienteTelefone">
-                </div>
-                <div>
-                    <label>E-mail:</label>
-                    <input type="email" id="clienteEmail">
-                </div>
-                <div class="full-width">
-                    <label>Endereço:</label>
-                    <input type="text" id="clienteEndereco">
-                </div>
-
-                <input type="hidden" id="clienteId">
-                <button type="submit" id="btnSalvarCliente" class="submit-btn">Cadastrar Cliente</button>
-                <button type="button" class="cancel-btn" id="btnCancelarCliente" onclick="limparFormularioCliente()" style="display:none; margin-top: 10px; width: 100%;">Cancelar Seleção</button>
-            </form>
-
-            <h3>Lista de Clientes</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
-                        <th>Telefone</th>
-                        <th>E-mail</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaClientes"></tbody>
-            </table>
-        </div>
-
-        <!-- ABA PRODUTOS -->
-        <div id="produtos" class="tab-content">
-            <h2>Gerenciar Produtos / Doces</h2>
-            <form id="produtoForm" onsubmit="salvarProduto(event)">
-                <input type="hidden" id="produtoDatabaseId">
-                <div>
-                    <label>ID Banco (Somente Leitura):</label>
-                    <input type="text" id="produtoIdDisplay" readonly placeholder="Automático">
-                </div>
-                <div>
-                    <label>Código:</label>
-                    <input type="text" id="produtoCodigo" required placeholder="Ex: DOC01">
-                </div>
-                <div>
-                    <label>Nome do Doce:</label>
-                    <input type="text" id="produtoNome" required>
-                </div>
-                <div>
-                    <label>Sabor:</label>
-                    <input type="text" id="produtoSabor">
-                </div>
-                <div>
-                    <label>Recheio:</label>
-                    <input type="text" id="produtoRecheio">
-                </div>
-                <div>
-                    <label>Peso:</label>
-                    <input type="text" id="produtoPeso">
-                </div>
-                <div>
-                    <label>Preço de Venda (R$):</label>
-                    <input type="number" step="0.01" id="produtoPreco" required>
-                </div>
-                <div class="full-width">
-                    <label>Ingredientes:</label>
-                    <input type="text" id="produtoIngredientes">
-                </div>
-
-                <input type="hidden" id="produtoDatabaseId">
-                <button type="submit" id="btnSalvarProduto" class="submit-btn">Cadastrar Produto</button>
-                <button type="button" class="cancel-btn" id="btnCancelarProduto" onclick="limparFormularioProduto()" style="display:none; margin-top: 10px; width: 100%;">Cancelar Seleção</button>
-            </form>
-
-            <h3>Catálogo de Produtos</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Código</th>
-                        <th>Nome</th>
-                        <th>Sabor</th>
-                        <th>Preço</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaProdutos"></tbody>
-            </table>
-        </div>
-
-        <!-- ABA PEDIDOS -->
-        <div id="pedidos" class="tab-content">
-            <h2>Novo Pedido</h2>
-            <form id="pedidoForm" onsubmit="salvarPedido(event)">
-                <div class="full-width">
-                    <label>Selecione o Cliente:</label>
-                    <select id="pedidoClienteSelect" required></select>
-                </div>
-                <div class="full-width">
-                    <label>Selecione o Produto:</label>
-                    <select id="pedidoProdutoSelect" required></select>
-                </div>
-                <div>
-                    <label>Quantidade:</label>
-                    <input type="number" id="pedidoQuantidade" value="1" min="1" required>
-                </div>
-                <button type="submit" class="submit-btn">Registrar Venda / Pedido</button>
-            </form>
-
-            <h3>Histórico de Pedidos</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID Pedido</th>
-                        <th>Cliente</th>
-                        <th>Data</th>
-                        <th>Valor Total</th>
-                    </tr>
-                </thead>
-                <tbody id="tabelaPedidos"></tbody>
-            </table>
-        </div>
+    <!-- Mostrado enquanto o app verifica se já existe uma sessão ativa (evita tela em branco) -->
+    <div id="viewCarregando" class="login">
+        <p class="muted">Carregando…</p>
     </div>
 
-    <script src="script.js"></script>
+    <!-- ===================== LOGIN ===================== -->
+    <main id="viewLogin" class="login" hidden>
+        <!-- method="post": se o JavaScript falhar, a senha nunca vai parar na URL/histórico -->
+        <form id="formLogin" class="card login-card" method="post" autocomplete="on" novalidate>
+            <h1 class="brand">🧁 Renata Doces</h1>
+            <p class="muted center">Entre para gerenciar a doceria</p>
+
+            <div class="field">
+                <label for="loginUsuario">Usuário</label>
+                <input id="loginUsuario" name="username" type="text" autocomplete="username"
+                       autocapitalize="none" autocorrect="off" spellcheck="false" required>
+            </div>
+            <div class="field">
+                <label for="loginSenha">Senha</label>
+                <input id="loginSenha" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <p id="loginErro" class="error-text" role="alert" hidden></p>
+            <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        </form>
+    </main>
+
+    <!-- ===================== APLICATIVO ===================== -->
+    <div id="viewApp" hidden>
+        <header class="topbar">
+            <h1 class="brand">🧁 Renata Doces</h1>
+            <button type="button" id="btnSair" class="btn btn-ghost">Sair</button>
+        </header>
+
+        <main class="content">
+
+            <!-- ---------- CLIENTES ---------- -->
+            <section id="aba-clientes" class="aba" aria-labelledby="titulo-clientes">
+                <div class="section-head">
+                    <h2 id="titulo-clientes">Clientes</h2>
+                    <button type="button" id="btnNovoCliente" class="btn btn-primary">+ Novo</button>
+                </div>
+                <input id="buscaClientes" class="search" type="search" placeholder="Buscar cliente…"
+                       autocomplete="off" autocapitalize="none" enterkeyhint="search" aria-label="Buscar cliente">
+                <ul id="listaClientes" class="list"></ul>
+            </section>
+
+            <!-- ---------- PRODUTOS ---------- -->
+            <section id="aba-produtos" class="aba" aria-labelledby="titulo-produtos" hidden>
+                <div class="section-head">
+                    <h2 id="titulo-produtos">Produtos</h2>
+                    <button type="button" id="btnNovoProduto" class="btn btn-primary">+ Novo</button>
+                </div>
+                <input id="buscaProdutos" class="search" type="search" placeholder="Buscar produto…"
+                       autocomplete="off" autocapitalize="none" enterkeyhint="search" aria-label="Buscar produto">
+                <ul id="listaProdutos" class="list"></ul>
+            </section>
+
+            <!-- ---------- PEDIDOS ---------- -->
+            <section id="aba-pedidos" class="aba" aria-labelledby="titulo-pedidos" hidden>
+                <div class="section-head">
+                    <h2 id="titulo-pedidos">Novo pedido</h2>
+                </div>
+
+                <form id="formPedido" class="card" novalidate>
+                    <div class="field">
+                        <label for="pedidoCliente">Cliente</label>
+                        <select id="pedidoCliente" required></select>
+                    </div>
+
+                    <div id="itensPedido" class="itens"></div>
+
+                    <button type="button" id="btnAddItem" class="btn btn-secondary btn-block">+ Adicionar produto</button>
+
+                    <div class="total-row">
+                        <span>Total</span>
+                        <strong id="totalPedido">R$ 0,00</strong>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block">Registrar pedido</button>
+                </form>
+
+                <div class="section-head">
+                    <h2>Últimos pedidos</h2>
+                </div>
+                <ul id="listaPedidos" class="list"></ul>
+            </section>
+        </main>
+
+        <nav class="tabbar" aria-label="Navegação principal">
+            <button type="button" class="tab active" data-aba="clientes" aria-current="page">
+                <span class="tab-icon" aria-hidden="true">👥</span><span>Clientes</span>
+            </button>
+            <button type="button" class="tab" data-aba="produtos">
+                <span class="tab-icon" aria-hidden="true">🍰</span><span>Produtos</span>
+            </button>
+            <button type="button" class="tab" data-aba="pedidos">
+                <span class="tab-icon" aria-hidden="true">🧾</span><span>Pedidos</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ===================== FOLHA: CLIENTE ===================== -->
+    <div id="sheetCliente" class="sheet" hidden>
+        <div class="sheet-backdrop" data-fechar></div>
+        <form id="formCliente" class="sheet-panel" novalidate role="dialog" aria-modal="true" aria-labelledby="tituloFormCliente">
+            <div class="sheet-head">
+                <h2 id="tituloFormCliente">Novo cliente</h2>
+                <button type="button" class="btn btn-ghost" data-fechar>Fechar</button>
+            </div>
+            <div class="field">
+                <label for="clienteNome">Nome</label>
+                <input id="clienteNome" type="text" maxlength="120" autocomplete="off" autocapitalize="words" required>
+            </div>
+            <div class="field">
+                <label for="clienteTelefone">Telefone / WhatsApp</label>
+                <input id="clienteTelefone" type="tel" inputmode="tel" maxlength="30" autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="clienteEmail">E-mail</label>
+                <input id="clienteEmail" type="email" inputmode="email" maxlength="160" autocomplete="off"
+                       autocapitalize="none" autocorrect="off" spellcheck="false">
+            </div>
+            <div class="field">
+                <label for="clienteEndereco">Endereço</label>
+                <input id="clienteEndereco" type="text" maxlength="250" autocomplete="off" autocapitalize="sentences">
+            </div>
+            <p id="erroCliente" class="error-text" role="alert" hidden></p>
+            <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+        </form>
+    </div>
+
+    <!-- ===================== FOLHA: PRODUTO ===================== -->
+    <div id="sheetProduto" class="sheet" hidden>
+        <div class="sheet-backdrop" data-fechar></div>
+        <form id="formProduto" class="sheet-panel" novalidate role="dialog" aria-modal="true" aria-labelledby="tituloFormProduto">
+            <div class="sheet-head">
+                <h2 id="tituloFormProduto">Novo produto</h2>
+                <button type="button" class="btn btn-ghost" data-fechar>Fechar</button>
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label for="produtoCodigo">Código</label>
+                    <input id="produtoCodigo" type="text" maxlength="30" placeholder="Ex.: BRIG01"
+                           autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" required>
+                </div>
+                <div class="field">
+                    <label for="produtoPreco">Preço (R$)</label>
+                    <input id="produtoPreco" type="text" inputmode="decimal" maxlength="12" placeholder="0,00"
+                           autocomplete="off" required>
+                </div>
+            </div>
+            <div class="field">
+                <label for="produtoNome">Nome do doce</label>
+                <input id="produtoNome" type="text" maxlength="120" autocomplete="off" autocapitalize="sentences" required>
+            </div>
+            <div class="grid-2">
+                <div class="field">
+                    <label for="produtoSabor">Sabor</label>
+                    <input id="produtoSabor" type="text" maxlength="80" autocomplete="off">
+                </div>
+                <div class="field">
+                    <label for="produtoRecheio">Recheio</label>
+                    <input id="produtoRecheio" type="text" maxlength="80" autocomplete="off">
+                </div>
+            </div>
+            <div class="field">
+                <label for="produtoPeso">Peso</label>
+                <input id="produtoPeso" type="text" maxlength="30" placeholder="Ex.: 40 g" autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="produtoIngredientes">Ingredientes</label>
+                <textarea id="produtoIngredientes" rows="3" maxlength="1000"></textarea>
+            </div>
+            <p id="erroProduto" class="error-text" role="alert" hidden></p>
+            <button type="submit" class="btn btn-primary btn-block">Salvar</button>
+        </form>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="/app.js"></script>
 </body>
 </html>

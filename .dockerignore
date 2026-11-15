@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+.git/
+.gitignore
+.gitattributes
+Dockerfile
+.dockerignore
+README.md
+LICENSE*
+**/secrets.json
+**/appsettings.*.local.json
+**/.env
