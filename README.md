@@ -106,4 +106,4 @@ SQL Injection não era um risco: todas as consultas passam pelo Entity Framework
 
 ## Licença
 
-MIT. Veja o arquivo `LICENSE.txt`.
+MIT. Veja o arquivo `LICENSE`.
