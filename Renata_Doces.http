@@ -1,9 +1,10 @@
 @host = http://localhost:5167
 
 # Teste de ponta a ponta da API (Visual Studio 2022 17.8+: botão "Enviar solicitação" em cada bloco).
-# Rode na ordem. Troque USUARIO/SENHA pelos valores configurados em "Manage User Secrets".
+# Rode na ordem. Troque as senhas de exemplo por senhas suas (mínimo de 10 caracteres).
 # Se o seu Visual Studio não reaproveitar o cookie de sessão entre as chamadas, faça o mesmo teste
 # pelo navegador (a tela já usa esta mesma API). Em Development, a descrição OpenAPI fica em /openapi/v1.json
+# Docker: troque o host acima por http://localhost:8080 (ou a porta que você publicou).
 
 ### 1) Saúde: confirma que o app está de pé E conectado ao banco (esperado: 200 {"status":"ok"})
 GET {{host}}/health
@@ -11,56 +12,85 @@ GET {{host}}/health
 ### 2) Sem login a API deve negar (esperado: 401)
 GET {{host}}/api/clientes
 
-### 3) Login (esperado: 200 e cookie "renata.auth"). Errar a senha 6x em 1 minuto deve dar 429.
+### 3) Status do cadastro (esperado em banco vazio: 200 {"aberto":true,"exigeCodigo":false,"primeiroAcesso":true})
+GET {{host}}/api/auth/cadastro
+
+### 4) Cadastrar usuário: a primeira conta (esperado: 201 {"usuario":"renata"}). A senha é gravada só como hash.
+POST {{host}}/api/auth/registrar
+Content-Type: application/json
+
+{ "usuario": "renata", "senha": "troque-por-uma-senha-longa", "confirmarSenha": "troque-por-uma-senha-longa" }
+
+### 5) Validação do cadastro: senha curta e confirmação diferente (esperado: 400 com mensagem em português)
+POST {{host}}/api/auth/registrar
+Content-Type: application/json
+
+{ "usuario": "ana", "senha": "curta", "confirmarSenha": "outra" }
+
+### 6) Segunda conta SEM código de convite (esperado: 403 "O cadastro está fechado").
+# Com Auth:CodigoConvite configurado, informe "codigoConvite": o certo dá 201 e o errado dá 403.
+# Repetir um usuário que já existe (com o código certo) dá 409.
+POST {{host}}/api/auth/registrar
+Content-Type: application/json
+
+{ "usuario": "ana", "senha": "outra-senha-longa-1", "confirmarSenha": "outra-senha-longa-1", "codigoConvite": "" }
+
+### 7) Login errado (esperado: 401). Errar 6x em 1 minuto deve dar 429.
 POST {{host}}/api/auth/login
 Content-Type: application/json
 
-{ "usuario": "USUARIO", "senha": "SENHA" }
+{ "usuario": "renata", "senha": "senha-errada-123" }
 
-### 4) Cadastrar cliente (esperado: 201)
+### 8) Login certo (esperado: 200 e cookie "renata.auth")
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "usuario": "renata", "senha": "troque-por-uma-senha-longa" }
+
+### 9) Cadastrar cliente (esperado: 201)
 POST {{host}}/api/clientes
 Content-Type: application/json
 
 { "nome": "Maria da Silva", "telefone": "(21) 99999-0000", "email": "maria@exemplo.com", "endereco": "Rua das Flores, 10" }
 
-### 5) Validação: nome vazio (esperado: 400 com a mensagem em português)
+### 10) Validação: nome vazio (esperado: 400 com a mensagem em português)
 POST {{host}}/api/clientes
 Content-Type: application/json
 
 { "nome": "", "telefone": "abc" }
 
-### 6) Cadastrar produto (esperado: 201)
+### 11) Cadastrar produto (esperado: 201)
 POST {{host}}/api/produtos
 Content-Type: application/json
 
 { "codigo": "BRIG01", "nome": "Brigadeiro gourmet", "sabor": "Chocolate", "recheio": "", "peso": "30 g", "precoVenda": 4.50, "ingredientes": "Leite condensado, cacau, manteiga" }
 
-### 7) Código repetido (esperado: 409)
+### 12) Código repetido (esperado: 409)
 POST {{host}}/api/produtos
 Content-Type: application/json
 
 { "codigo": "BRIG01", "nome": "Outro", "precoVenda": 5 }
 
-### 8) Listar produtos e clientes (anote os ids)
+### 13) Listar produtos e clientes (anote os ids)
 GET {{host}}/api/produtos
 
 ###
 GET {{host}}/api/clientes
 
-### 9) Criar pedido (ajuste clienteId/produtoId; esperado: 201 com total = preço do cadastro x quantidade)
+### 14) Criar pedido (ajuste clienteId/produtoId; esperado: 201 com total = preço do cadastro x quantidade)
 POST {{host}}/api/pedidos
 Content-Type: application/json
 
 { "clienteId": 1, "itens": [ { "produtoId": 1, "quantidade": 10 } ] }
 
-### 10) Listar pedidos (esperado: 200, sem erro de referência circular)
+### 15) Listar pedidos (esperado: 200, sem erro de referência circular)
 GET {{host}}/api/pedidos
 
-### 11) Excluir cliente que tem pedido (esperado: 409; o histórico NÃO pode ser apagado)
+### 16) Excluir cliente que tem pedido (esperado: 409; o histórico NÃO pode ser apagado)
 DELETE {{host}}/api/clientes/1
 
-### 12) Excluir produto já vendido (esperado: 409)
+### 17) Excluir produto já vendido (esperado: 409)
 DELETE {{host}}/api/produtos/1
 
-### 13) Sair
+### 18) Sair
 POST {{host}}/api/auth/logout

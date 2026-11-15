@@ -16,6 +16,7 @@ namespace Renata_Doces.Data
         public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<PedidoItem> PedidoItens { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
 
         // Configurando precisão para campos de dinheiro/preço
         // (mantido idêntico ao model snapshot das migrations existentes).
@@ -34,6 +35,14 @@ namespace Renata_Doces.Data
             modelBuilder.Entity<PedidoItem>()
                 .Property(pi => pi.PrecoUnitario)
                 .HasColumnType("decimal(18,2)");
+
+            // Contas de acesso: nome único (o SQL Server compara sem diferenciar maiúsculas/minúsculas).
+            modelBuilder.Entity<Usuario>(entidade =>
+            {
+                entidade.Property(u => u.NomeUsuario).IsRequired().HasMaxLength(60);
+                entidade.Property(u => u.SenhaHash).IsRequired().HasMaxLength(500);
+                entidade.HasIndex(u => u.NomeUsuario).IsUnique();
+            });
         }
     }
 }

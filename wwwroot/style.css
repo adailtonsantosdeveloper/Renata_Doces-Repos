@@ -7,6 +7,7 @@
     --primary-hover: #a82262;
     --primary-soft: #fbe6ef;
     --danger: #c0392b;
+    --ok: #1e7e34;
     --on-primary: #ffffff;
     --bg: #fdfbf7;
     --surface: #ffffff;
@@ -27,6 +28,7 @@
         --primary-hover: #ea74a4;
         --primary-soft: #3a1f2c;
         --danger: #ff7b6b;
+        --ok: #5fd08a;
         --on-primary: #1b1b1b;
         --bg: #161214;
         --surface: #221c1f;
@@ -173,6 +175,8 @@ input:focus, select:focus, textarea:focus {
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 
 .error-text { color: var(--danger); font-size: 0.95rem; margin-bottom: 12px; }
+.ok-text { color: var(--ok); font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; text-align: center; }
+.hint { color: var(--muted); font-size: 0.85rem; }
 
 /* ---------- Botões (alvo de toque >= 44px) ---------- */
 .btn {

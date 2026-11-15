@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Renata_Doces.Data;
+using Renata_Doces.Models;
 using Renata_Doces.Security;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,13 +24,19 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "(em produção, a variável de ambiente ConnectionStrings__DefaultConnection). Veja o README.");
 }
 
+// As contas de acesso ficam no banco (tabela Usuarios) e são criadas pela tela de cadastro.
+// Auth:Usuario / Auth:Senha são OPCIONAIS: se informados, criam uma conta inicial na primeira
+// inicialização. Informar só um dos dois é erro de configuração, e o app avisa logo ao subir.
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
-if (string.IsNullOrWhiteSpace(authOptions.Usuario) || authOptions.Senha.Length < 10)
+var informouContaInicial = !string.IsNullOrWhiteSpace(authOptions.Usuario) || authOptions.Senha.Length > 0;
+if (informouContaInicial && (string.IsNullOrWhiteSpace(authOptions.Usuario)
+                             || authOptions.Usuario.Trim().Length > 60
+                             || authOptions.Senha.Length < 10))
 {
     throw new InvalidOperationException(
-        "Credenciais de acesso não configuradas. Defina 'Auth:Usuario' e 'Auth:Senha' " +
-        "(a senha precisa ter pelo menos 10 caracteres). Em produção use as variáveis de ambiente " +
-        "Auth__Usuario e Auth__Senha; em desenvolvimento use 'Manage User Secrets'. Veja o README.");
+        "Conta inicial mal configurada. Defina 'Auth:Usuario' (até 60 caracteres) e 'Auth:Senha' (mínimo de 10 caracteres) " +
+        "juntos, ou remova os dois e crie a conta pela tela de cadastro. Em produção use as variáveis de " +
+        "ambiente Auth__Usuario e Auth__Senha; em desenvolvimento use 'Manage User Secrets'. Veja o README.");
 }
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
 
@@ -58,6 +66,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, sql =>
         sql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null)));
 
+// Hash de senhas (PBKDF2 com sal aleatório) do próprio ASP.NET Core; senhas nunca são guardadas em texto.
+builder.Services.AddSingleton<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
+
 // =====================================================================
 // 4. Autenticação por cookie (mesma origem do front-end => sem CORS e sem token em JS)
 // =====================================================================
@@ -76,10 +87,13 @@ builder.Services
         options.Cookie.Name = "renata.auth";
         options.Cookie.HttpOnly = true;                           // JS não lê o cookie (mitiga roubo via XSS)
         options.Cookie.SameSite = SameSiteMode.Lax;               // mitiga CSRF
-        // Em produção o cookie só trafega por https (o proxy informa o esquema via X-Forwarded-Proto).
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
+        // "Secure" quando a requisição chegou por https (atrás de proxy o X-Forwarded-Proto informa isso).
+        // Assim também dá para testar em http://localhost no Docker: com "Always", o Safari descartaria o
+        // cookie e o login pareceria funcionar mas a sessão cairia na hora. Em produção com https de ponta
+        // a ponta, defina Auth__CookieSempreSeguro=true para forçar.
+        options.Cookie.SecurePolicy = authOptions.CookieSempreSeguro
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
 
@@ -116,6 +130,16 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0
         }));
 
+    // Criação de contas: poucas por IP, para impedir tentativas em massa do código de convite.
+    options.AddPolicy("cadastro", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(10),
+            QueueLimit = 0
+        }));
+
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "desconhecido",
@@ -139,10 +163,13 @@ var app = builder.Build();
 // =====================================================================
 if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
 {
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    // Com repetição: em Docker o app pode subir antes de o SQL Server estar pronto.
+    await BancoInicializacao.AplicarMigrationsAsync(app.Services, app.Logger);
 }
+
+// Conta inicial (só faz algo se Auth:Usuario e Auth:Senha estiverem definidos). Fica fora do "if" acima
+// para valer também com MigrateOnStartup=false; nesse caso o banco já precisa estar migrado.
+await UsuarioInicial.GarantirAsync(app.Services, app.Logger);
 
 // =====================================================================
 // 7. Pipeline HTTP (a ordem importa)
