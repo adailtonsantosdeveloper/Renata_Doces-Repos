@@ -44,8 +44,42 @@
                 <label for="loginSenha">Senha</label>
                 <input id="loginSenha" name="password" type="password" autocomplete="current-password" required>
             </div>
+            <p id="loginInfo" class="ok-text" role="status" hidden></p>
             <p id="loginErro" class="error-text" role="alert" hidden></p>
             <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+            <button type="button" id="btnIrCadastro" class="btn btn-ghost btn-block">Não tem uma conta? Cadastre-se</button>
+        </form>
+    </main>
+
+    <!-- ===================== CADASTRO DE USUÁRIO ===================== -->
+    <main id="viewCadastro" class="login" hidden>
+        <form id="formCadastro" class="card login-card" method="post" autocomplete="on" novalidate>
+            <h1 class="brand">🧁 Criar conta</h1>
+            <p id="cadastroAviso" class="muted center">Crie sua conta para acessar a doceria.</p>
+
+            <div class="field">
+                <label for="cadUsuario">Usuário</label>
+                <input id="cadUsuario" name="username" type="text" autocomplete="username"
+                       autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="60" required>
+                <small class="hint">3 a 60 caracteres: letras sem acento, números, ponto, hífen, sublinhado ou @.</small>
+            </div>
+            <div class="field">
+                <label for="cadSenha">Senha</label>
+                <input id="cadSenha" name="new-password" type="password" autocomplete="new-password" maxlength="128" required>
+                <small class="hint">Mínimo de 10 caracteres.</small>
+            </div>
+            <div class="field">
+                <label for="cadConfirmar">Confirmar senha</label>
+                <input id="cadConfirmar" name="confirm-password" type="password" autocomplete="new-password" maxlength="128" required>
+            </div>
+            <div id="campoConvite" class="field" hidden>
+                <label for="cadConvite">Código de convite</label>
+                <input id="cadConvite" type="text" autocomplete="off" autocapitalize="none"
+                       autocorrect="off" spellcheck="false" maxlength="200">
+            </div>
+            <p id="cadastroErro" class="error-text" role="alert" hidden></p>
+            <button type="submit" id="btnCadastrar" class="btn btn-primary btn-block">Criar conta</button>
+            <button type="button" id="btnVoltarLogin" class="btn btn-ghost btn-block">Já tenho conta: Entrar</button>
         </form>
     </main>
 

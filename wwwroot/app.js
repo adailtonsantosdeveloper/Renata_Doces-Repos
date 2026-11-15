@@ -182,7 +182,10 @@
         fecharFolhas();
 
         $('viewApp').hidden = true;
+        $('viewCadastro').hidden = true;
         $('viewLogin').hidden = false;
+        limparCadastro();
+        $('loginInfo').hidden = true;
 
         const erro = $('loginErro');
         erro.textContent = mensagem || '';
@@ -234,6 +237,97 @@
         }
         mostrarLogin();
         if (falhou) avisar('Não foi possível encerrar a sessão no servidor. Tente sair de novo quando tiver conexão.', true);
+    }
+
+    // ------------------------------------------------------------------
+    // Cadastro de usuário
+    // ------------------------------------------------------------------
+    const REGRA_USUARIO = /^[A-Za-z0-9._@-]{3,60}$/;
+    const SENHA_MINIMA = 10;
+    const SENHA_MAXIMA = 128;
+
+    function limparCadastro() {
+        for (const id of ['cadUsuario', 'cadSenha', 'cadConfirmar', 'cadConvite']) $(id).value = '';
+        $('cadastroErro').hidden = true;
+    }
+
+    async function abrirCadastro() {
+        limparCadastro();
+        $('loginErro').hidden = true;
+        $('loginInfo').hidden = true;
+        $('viewLogin').hidden = true;
+        $('viewCadastro').hidden = false;
+        $('btnCadastrar').disabled = false;
+        $('campoConvite').hidden = true;
+        $('cadastroAviso').textContent = 'Crie sua conta para acessar a doceria.';
+        $('cadUsuario').focus({ preventScroll: true });
+
+        // O servidor diz se pede código de convite ou se o cadastro está fechado.
+        const minha = sessao;
+        try {
+            const status = await api('/auth/cadastro');
+            if (minha !== sessao || $('viewCadastro').hidden) return;
+
+            $('campoConvite').hidden = !status.exigeCodigo;
+            if (!status.aberto) {
+                $('cadastroAviso').textContent = 'O cadastro está fechado. Peça o código de convite a quem administra o sistema.';
+                $('btnCadastrar').disabled = true;
+            } else if (status.exigeCodigo) {
+                $('cadastroAviso').textContent = 'Informe o código de convite que você recebeu.';
+            } else if (status.primeiroAcesso) {
+                $('cadastroAviso').textContent = 'Primeiro acesso: crie a conta principal do sistema.';
+            }
+        } catch (e) {
+            // Sem resposta: o formulário continua utilizável, e o servidor confere tudo de novo ao enviar.
+            avisarErro(e);
+        }
+    }
+
+    async function aoEnviarCadastro(evento) {
+        evento.preventDefault();
+        const usuario = $('cadUsuario').value.trim();
+        const senha = $('cadSenha').value;
+        const confirmarSenha = $('cadConfirmar').value;
+        const codigoConvite = $('cadConvite').value.trim();
+        const erro = $('cadastroErro');
+        const botao = evento.submitter || evento.target.querySelector('button[type="submit"]');
+
+        let problema = null;
+        if (!REGRA_USUARIO.test(usuario)) problema = 'O usuário deve ter de 3 a 60 caracteres: letras sem acento, números, ponto, hífen, sublinhado ou @.';
+        else if (senha.length < SENHA_MINIMA) problema = `A senha deve ter no mínimo ${SENHA_MINIMA} caracteres.`;
+        else if (senha.length > SENHA_MAXIMA) problema = `A senha deve ter no máximo ${SENHA_MAXIMA} caracteres.`;
+        else if (senha.toLowerCase() === usuario.toLowerCase()) problema = 'A senha não pode ser igual ao nome de usuário.';
+        else if (senha !== confirmarSenha) problema = 'A confirmação da senha não confere.';
+        else if (!$('campoConvite').hidden && !codigoConvite) problema = 'Informe o código de convite.';
+
+        if (problema) {
+            erro.textContent = problema;
+            erro.hidden = false;
+            return;
+        }
+
+        erro.hidden = true;
+        botao.disabled = true;
+        try {
+            await api('/auth/registrar', {
+                method: 'POST',
+                body: { usuario, senha, confirmarSenha, codigoConvite: codigoConvite || null }
+            });
+        } catch (e) {
+            erro.textContent = textoDoErro(e);
+            erro.hidden = false;
+            return;
+        } finally {
+            botao.disabled = false;
+        }
+
+        // Conta criada: volta ao login (sem entrar sozinho), com o usuário já preenchido.
+        mostrarLogin();
+        $('loginUsuario').value = usuario;
+        const info = $('loginInfo');
+        info.textContent = 'Conta criada! Entre com seu usuário e senha.';
+        info.hidden = false;
+        $('loginSenha').focus({ preventScroll: true });
     }
 
     // ------------------------------------------------------------------
@@ -676,6 +770,9 @@
     function ligarEventos() {
         acompanharTeclado();
         $('formLogin').addEventListener('submit', aoEnviarLogin);
+        $('btnIrCadastro').addEventListener('click', abrirCadastro);
+        $('btnVoltarLogin').addEventListener('click', () => mostrarLogin());
+        $('formCadastro').addEventListener('submit', aoEnviarCadastro);
         $('btnSair').addEventListener('click', sair);
 
         for (const botao of document.querySelectorAll('.tab')) {
