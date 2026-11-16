@@ -2,6 +2,10 @@
 
 Sistema web para gerenciar uma micro doceria: cadastro de **clientes** e **produtos**, registro de **pedidos** (com total calculado pelo servidor) e histórico de vendas, com **contas de usuário** para entrar. Funciona no **iPhone**, em qualquer celular e no computador, direto pelo navegador, e pode ser instalado na Tela de Início como se fosse um aplicativo.
 
+## Códigos automáticos
+
+Cliente (`CLI-0001`), produto (`PRD-0001`) e pedido (`PED-0001`) recebem o código do próprio sistema, a partir do número sequencial do banco. Os campos de código nas telas são somente leitura. Antes de salvar, a tela mostra o código **previsto** (`GET /api/<recurso>/proximo-codigo`); o código definitivo é o devolvido ao salvar. Produtos antigos mantêm o código que já tinham.
+
 ## Tecnologias
 
 | Camada | Tecnologia | Por quê |

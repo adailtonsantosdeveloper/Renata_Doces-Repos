@@ -5,10 +5,6 @@ namespace Renata_Doces.DTOs
     /// <summary>Dados aceitos ao cadastrar/editar um produto (veja o comentário em ClienteRequest).</summary>
     public class ProdutoRequest
     {
-        [Required(ErrorMessage = "O código é obrigatório.")]
-        [StringLength(30, ErrorMessage = "O código deve ter no máximo 30 caracteres.")]
-        public string Codigo { get; set; } = string.Empty;
-
         [Required(ErrorMessage = "O nome é obrigatório.")]
         [StringLength(120, MinimumLength = 2, ErrorMessage = "O nome deve ter entre 2 e 120 caracteres.")]
         public string Nome { get; set; } = string.Empty;

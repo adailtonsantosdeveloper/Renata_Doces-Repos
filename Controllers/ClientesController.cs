@@ -44,6 +44,14 @@ namespace Renata_Doces.Controllers
             return cliente;
         }
 
+        // GET: api/clientes/proximo-codigo  (previsão para exibir no formulário)
+        [HttpGet("proximo-codigo")]
+        public async Task<IActionResult> ProximoCodigo(CancellationToken cancellationToken)
+        {
+            var id = await Codigos.ProximoIdAsync(_context, "Clientes", cancellationToken);
+            return Ok(new { codigo = Codigos.Cliente(id) });
+        }
+
         // POST: api/clientes
         [HttpPost]
         public async Task<ActionResult<Cliente>> PostCliente(ClienteRequest dto, CancellationToken cancellationToken)

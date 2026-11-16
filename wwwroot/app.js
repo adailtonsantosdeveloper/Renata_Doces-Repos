@@ -397,6 +397,18 @@
     // ------------------------------------------------------------------
     // CLIENTES
     // ------------------------------------------------------------------
+    // Mostra no campo (somente leitura) o código previsto para o próximo cadastro.
+    // O código definitivo é o que o servidor devolve ao salvar.
+    async function mostrarProximoCodigo(campo, recurso) {
+        campo.value = '…';
+        try {
+            const r = await api(`/${recurso}/proximo-codigo`);
+            campo.value = r.codigo;
+        } catch {
+            campo.value = 'Automático';
+        }
+    }
+
     async function carregarClientes() {
         const minha = sessao;
         const dados = await api('/clientes');
@@ -410,7 +422,7 @@
         const termo = normalizar($('buscaClientes').value.trim());
         const lista = $('listaClientes');
         const filtrados = estado.clientes.filter((c) =>
-            !termo || normalizar(`${c.nome} ${c.telefone ?? ''} ${c.email ?? ''}`).includes(termo));
+            !termo || normalizar(`${c.nome} ${c.codigo} ${c.telefone ?? ''} ${c.email ?? ''}`).includes(termo));
 
         if (filtrados.length === 0) {
             lista.replaceChildren(el('li', {
@@ -424,6 +436,7 @@
             const telefoneLimpo = (c.telefone ?? '').replace(/[^\d+]/g, '');
             return el('li', { class: 'item' },
                 el('div', { class: 'item-title', text: c.nome }),
+                el('div', { class: 'item-line', text: `Código: ${c.codigo}` }),
                 c.telefone && el('div', { class: 'item-line' },
                     telefoneLimpo
                         ? el('a', { href: `tel:${telefoneLimpo}`, text: `📞 ${c.telefone}` })
@@ -439,6 +452,8 @@
     function abrirFormularioCliente(cliente) {
         estado.editandoClienteId = cliente ? cliente.id : null;
         $('tituloFormCliente').textContent = cliente ? 'Editar cliente' : 'Novo cliente';
+        if (cliente) $('clienteCodigo').value = cliente.codigo;
+        else mostrarProximoCodigo($('clienteCodigo'), 'clientes');
         $('clienteNome').value = cliente?.nome ?? '';
         $('clienteTelefone').value = cliente?.telefone ?? '';
         $('clienteEmail').value = cliente?.email ?? '';
@@ -473,8 +488,9 @@
         erro.hidden = true;
         botao.disabled = true;
         const editando = estado.editandoClienteId !== null;
+        let salvo = null;
         try {
-            await api(editando ? `/clientes/${estado.editandoClienteId}` : '/clientes', {
+            salvo = await api(editando ? `/clientes/${estado.editandoClienteId}` : '/clientes', {
                 method: editando ? 'PUT' : 'POST',
                 body: corpo
             });
@@ -487,7 +503,7 @@
         }
 
         fecharFolhas();
-        avisar(editando ? 'Cliente atualizado.' : 'Cliente cadastrado.');
+        avisar(editando ? 'Cliente atualizado.' : `Cliente cadastrado: ${salvo?.codigo ?? ''}`.trim());
         carregarClientes().catch(avisarErro);
     }
 
@@ -544,7 +560,8 @@
     function abrirFormularioProduto(produto) {
         estado.editandoProdutoId = produto ? produto.id : null;
         $('tituloFormProduto').textContent = produto ? 'Editar produto' : 'Novo produto';
-        $('produtoCodigo').value = produto?.codigo ?? '';
+        if (produto) $('produtoCodigo').value = produto.codigo;
+        else mostrarProximoCodigo($('produtoCodigo'), 'produtos');
         $('produtoNome').value = produto?.nome ?? '';
         $('produtoSabor').value = produto?.sabor ?? '';
         $('produtoRecheio').value = produto?.recheio ?? '';
@@ -552,7 +569,7 @@
         $('produtoPreco').value = produto ? Number(produto.precoVenda).toFixed(2).replace('.', ',') : '';
         $('produtoIngredientes').value = produto?.ingredientes ?? '';
         $('erroProduto').hidden = true;
-        abrirFolha($('sheetProduto'), $('produtoCodigo'));
+        abrirFolha($('sheetProduto'), $('produtoNome'));
     }
 
     async function salvarProduto(evento) {
@@ -562,7 +579,6 @@
 
         const preco = lerDecimal($('produtoPreco').value);
         const corpo = {
-            codigo: $('produtoCodigo').value.trim(),
             nome: $('produtoNome').value.trim(),
             sabor: vazioParaNulo($('produtoSabor').value),
             recheio: vazioParaNulo($('produtoRecheio').value),
@@ -572,8 +588,7 @@
         };
 
         let problema = null;
-        if (!corpo.codigo) problema = 'Informe o código do produto.';
-        else if (corpo.nome.length < 2) problema = 'Informe o nome do doce.';
+        if (corpo.nome.length < 2) problema = 'Informe o nome do doce.';
         else if (!Number.isFinite(preco) || preco < 0.01 || preco > 999999.99) problema = 'Informe um preço válido (ex.: 4,50).';
 
         if (problema) {
@@ -585,8 +600,9 @@
         erro.hidden = true;
         botao.disabled = true;
         const editando = estado.editandoProdutoId !== null;
+        let salvo = null;
         try {
-            await api(editando ? `/produtos/${estado.editandoProdutoId}` : '/produtos', {
+            salvo = await api(editando ? `/produtos/${estado.editandoProdutoId}` : '/produtos', {
                 method: editando ? 'PUT' : 'POST',
                 body: corpo
             });
@@ -599,7 +615,7 @@
         }
 
         fecharFolhas();
-        avisar(editando ? 'Produto atualizado.' : 'Produto cadastrado.');
+        avisar(editando ? 'Produto atualizado.' : `Produto cadastrado: ${salvo?.codigo ?? ''}`.trim());
         carregarProdutos().catch(avisarErro);
     }
 
@@ -627,6 +643,7 @@
     }
 
     function montarFormularioPedido() {
+        mostrarProximoCodigo($('pedidoCodigo'), 'pedidos');
         preencherSelectClientes();
         renderizarItensPedido();
     }
@@ -701,13 +718,13 @@
         }
 
         lista.replaceChildren(...estado.pedidos.map((p) => el('li', { class: 'item' },
-            el('div', { class: 'item-title', text: `Pedido #${p.id} · ${p.clienteNome}` }),
+            el('div', { class: 'item-title', text: `${p.codigo} · ${p.clienteNome}` }),
             el('div', { class: 'item-line', text: formatarData(p.dataPedido) }),
             el('ul', { class: 'pedido-items' },
                 p.itens.map((i) => el('li', { text: `${i.quantidade} × ${i.produtoNome} (${moeda.format(i.precoUnitario)})` }))),
             el('div', { class: 'pedido-total', text: `Total: ${moeda.format(p.valorTotal)}` }),
             el('div', { class: 'item-actions' },
-                el('button', { type: 'button', class: 'btn btn-danger btn-small', text: 'Cancelar pedido', 'aria-label': `Cancelar pedido ${p.id}`, onclick: () => excluirPedido(p) })))));
+                el('button', { type: 'button', class: 'btn btn-danger btn-small', text: 'Cancelar pedido', 'aria-label': `Cancelar pedido ${p.codigo}`, onclick: () => excluirPedido(p) })))));
     }
 
     async function registrarPedido(evento) {
@@ -736,9 +753,10 @@
             return;
         }
 
+        let criado = null;
         botao.disabled = true;
         try {
-            await api('/pedidos', { method: 'POST', body: { clienteId, itens } });
+            criado = await api('/pedidos', { method: 'POST', body: { clienteId, itens } });
         } catch (e) {
             avisarErro(e);
             return;
@@ -749,12 +767,13 @@
         estado.itensPedido = [{ produtoId: '', quantidade: 1 }];
         $('pedidoCliente').value = '';
         renderizarItensPedido();
-        avisar('Pedido registrado.');
+        avisar(`Pedido registrado: ${criado?.codigo ?? ''}`.trim());
+        mostrarProximoCodigo($('pedidoCodigo'), 'pedidos');
         carregarPedidos().catch(avisarErro);
     }
 
     async function excluirPedido(pedido) {
-        if (!confirm(`Cancelar o pedido #${pedido.id} de ${pedido.clienteNome}? Isso não pode ser desfeito.`)) return;
+        if (!confirm(`Cancelar o pedido ${pedido.codigo} de ${pedido.clienteNome}? Isso não pode ser desfeito.`)) return;
         try {
             await api(`/pedidos/${pedido.id}`, { method: 'DELETE' });
             avisar('Pedido cancelado.');

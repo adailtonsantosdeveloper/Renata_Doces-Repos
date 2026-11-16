@@ -44,21 +44,36 @@ namespace Renata_Doces.Controllers
             return produto;
         }
 
+        // GET: api/produtos/proximo-codigo  (previsão para exibir no formulário)
+        [HttpGet("proximo-codigo")]
+        public async Task<IActionResult> ProximoCodigo(CancellationToken cancellationToken)
+        {
+            var id = await Codigos.ProximoIdAsync(_context, "Produtos", cancellationToken);
+            return Ok(new { codigo = Codigos.Produto(id) });
+        }
+
         // POST: api/produtos
         [HttpPost]
         public async Task<ActionResult<Produto>> PostProduto(ProdutoRequest dto, CancellationToken cancellationToken)
         {
-            var codigo = Texto.Limpo(dto.Codigo);
-            if (await _context.Produtos.AnyAsync(p => p.Codigo == codigo, cancellationToken))
+            // O código (PRD-0001...) é gerado a partir do Id, que só existe depois de gravar:
+            // grava com um código provisório e acerta na mesma transação.
+            Produto produto = null!;
+            var estrategia = _context.Database.CreateExecutionStrategy();
+            await estrategia.ExecuteAsync(async () =>
             {
-                return Conflict(new { mensagem = $"Já existe um produto com o código '{codigo}'." });
-            }
+                _context.ChangeTracker.Clear();
+                produto = new Produto();
+                Aplicar(produto, dto);
+                produto.Codigo = "TMP-" + Guid.NewGuid().ToString("N")[..20];
 
-            var produto = new Produto();
-            Aplicar(produto, dto);
-
-            _context.Produtos.Add(produto);
-            await _context.SaveChangesAsync(cancellationToken);
+                await using var transacao = await _context.Database.BeginTransactionAsync(cancellationToken);
+                _context.Produtos.Add(produto);
+                await _context.SaveChangesAsync(cancellationToken);
+                produto.Codigo = Codigos.Produto(produto.Id);
+                await _context.SaveChangesAsync(cancellationToken);
+                await transacao.CommitAsync(cancellationToken);
+            });
 
             return CreatedAtAction(nameof(GetProduto), new { id = produto.Id }, produto);
         }
@@ -71,12 +86,6 @@ namespace Renata_Doces.Controllers
             if (produto == null)
             {
                 return NotFound(new { mensagem = "Produto não encontrado para atualização." });
-            }
-
-            var codigo = Texto.Limpo(dto.Codigo);
-            if (await _context.Produtos.AnyAsync(p => p.Codigo == codigo && p.Id != id, cancellationToken))
-            {
-                return Conflict(new { mensagem = $"Já existe outro produto com o código '{codigo}'." });
             }
 
             // Pedidos antigos não mudam: cada item guarda o preço da época da venda (PrecoUnitario).
@@ -118,7 +127,6 @@ namespace Renata_Doces.Controllers
 
         private static void Aplicar(Produto produto, ProdutoRequest dto)
         {
-            produto.Codigo = Texto.Limpo(dto.Codigo);
             produto.Nome = Texto.Limpo(dto.Nome);
             produto.Sabor = Texto.Limpo(dto.Sabor);
             produto.Recheio = Texto.Limpo(dto.Recheio);

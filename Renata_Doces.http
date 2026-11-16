@@ -59,17 +59,20 @@ Content-Type: application/json
 
 { "nome": "", "telefone": "abc" }
 
-### 11) Cadastrar produto (esperado: 201)
+### 11) Cadastrar produto (esperado: 201; o código PRD-0001... é gerado pelo sistema)
 POST {{host}}/api/produtos
 Content-Type: application/json
 
-{ "codigo": "BRIG01", "nome": "Brigadeiro gourmet", "sabor": "Chocolate", "recheio": "", "peso": "30 g", "precoVenda": 4.50, "ingredientes": "Leite condensado, cacau, manteiga" }
+{ "nome": "Brigadeiro gourmet", "sabor": "Chocolate", "recheio": "", "peso": "30 g", "precoVenda": 4.50, "ingredientes": "Leite condensado, cacau, manteiga" }
 
-### 12) Código repetido (esperado: 409)
-POST {{host}}/api/produtos
-Content-Type: application/json
+### 12) Próximo código previsto de cliente, produto e pedido (esperado: 200 {"codigo":"CLI-0001"} etc.)
+GET {{host}}/api/clientes/proximo-codigo
 
-{ "codigo": "BRIG01", "nome": "Outro", "precoVenda": 5 }
+###
+GET {{host}}/api/produtos/proximo-codigo
+
+###
+GET {{host}}/api/pedidos/proximo-codigo
 
 ### 13) Listar produtos e clientes (anote os ids)
 GET {{host}}/api/produtos
