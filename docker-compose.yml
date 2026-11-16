@@ -1,0 +1,86 @@
+# Renata Doces - implantação em servidor próprio (ex.: Turbo Cloud VPS, 5 GB de RAM / 15 GB de disco).
+#
+# Como usar (detalhes em deploy/LEIA-ME.md):
+#   1) cp .env.example .env   e preencha os valores (chmod 600 .env)
+#   2) docker compose up -d --build
+#
+# Só o Caddy (portas 80 e 443) fica exposto à internet. O app e o SQL Server ficam numa rede interna.
+name: renata-doces
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express                # edição gratuita (até 10 GB por banco)
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD:?Defina SA_PASSWORD no arquivo .env}
+      MSSQL_MEMORY_LIMIT_MB: "1280"     # teto de memória do SQL Server (sem isso ele toma quase tudo)
+    mem_limit: 2g
+    ulimits:
+      core: 0                           # sem arquivos de falha (core dump): podem ocupar gigabytes
+    volumes:
+      - sqldata:/var/opt/mssql
+    networks: [interna]
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    logging: &logs
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PORT: "8080"
+      ConnectionStrings__DefaultConnection: "Server=sql;Database=RenataDocesDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;Encrypt=True"
+      Auth__Usuario: ${AUTH_USUARIO:?Defina AUTH_USUARIO no arquivo .env}
+      Auth__Senha: ${AUTH_SENHA:?Defina AUTH_SENHA no arquivo .env}
+      Auth__CodigoConvite: ${AUTH_CODIGO_CONVITE:?Defina AUTH_CODIGO_CONVITE no arquivo .env}
+      Auth__CookieSempreSeguro: "true"  # o acesso é sempre por HTTPS (Caddy)
+      DataProtection__KeysPath: /keys   # sessões continuam válidas após reiniciar
+    mem_limit: 384m
+    read_only: true                     # sistema de arquivos só de leitura (menos superfície de ataque)
+    tmpfs:
+      - /tmp:size=32m
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - appkeys:/keys
+    networks: [interna]
+    logging: *logs
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    environment:
+      DOMAIN: ${DOMAIN:?Defina DOMAIN no arquivo .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    mem_limit: 96m
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    networks: [interna]
+    logging: *logs
+
+networks:
+  interna:
+
+volumes:
+  sqldata:
+  appkeys:
+  caddydata:
+  caddyconfig:

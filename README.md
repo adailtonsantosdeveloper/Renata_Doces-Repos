@@ -78,6 +78,10 @@ Abra `http://localhost:8080`, toque em **Cadastre-se** e crie a primeira conta. 
 - **Aplicar as migrations manualmente** (com `Database__MigrateOnStartup=false`): na pasta do projeto, `dotnet ef database update` com a variável `ConnectionStrings__DefaultConnection` apontando para o banco (por exemplo `Server=localhost,1433;Database=RenataDocesDb;User Id=sa;Password=...;TrustServerCertificate=True`). Se `Auth__Usuario` e `Auth__Senha` estiverem definidos, a conta inicial continua sendo criada ao iniciar, então rode as migrations antes de subir o app.
 - `TrustServerCertificate=True` é só para o SQL Server de teste em container. Em produção use um banco com certificado válido e `Encrypt=True`.
 
+## Servidor próprio (VPS)
+
+Para hospedar tudo (site, app e banco) num VPS pequeno, com HTTPS automático, limites de memória e backup, use o `docker-compose.yml` e siga o guia [`deploy/LEIA-ME.md`](deploy/LEIA-ME.md).
+
 ## Publicando (Docker / Render)
 
 - O `Dockerfile` respeita a variável `PORT` da plataforma (padrão 8080).

@@ -14,6 +14,16 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
 
+# Pasta das chaves de sessão (volume persistente): criada aqui para o usuário "app" poder gravar nela.
+RUN mkdir -p /keys && chown $APP_UID /keys
+
+# Menos memória: sem GC de servidor/concorrente, sem PGO e sem o canal de diagnóstico do .NET.
+ENV DOTNET_gcServer=0 \
+    DOTNET_gcConcurrent=0 \
+    DOTNET_TieredPGO=0 \
+    DOTNET_GCConserveMemory=5 \
+    DOTNET_EnableDiagnostics=0
+
 # Executa sem privilégios de administrador (usuário "app" já existe na imagem oficial).
 USER $APP_UID
 
