@@ -9,6 +9,7 @@
 		<!-- Menos memória/threads em containers pequenos (Render, etc.) -->
 		<ServerGarbageCollector>false</ServerGarbageCollector>
 		<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+		<TieredPGO>false</TieredPGO>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 	</PropertyGroup>
 

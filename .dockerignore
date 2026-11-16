@@ -14,3 +14,6 @@ LICENSE*
 **/secrets.json
 **/appsettings.*.local.json
 **/.env
+deploy/
+docker-compose*.yml
+.env*

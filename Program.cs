@@ -157,6 +157,15 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Em produção, sem conta inicial nem código de convite, o primeiro visitante do site criaria a conta principal.
+if (!app.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(authOptions.Usuario)
+    && string.IsNullOrWhiteSpace(authOptions.CodigoConvite))
+{
+    app.Logger.LogWarning(
+        "Produção sem Auth__Usuario/Auth__Senha e sem Auth__CodigoConvite: quem abrir o site primeiro poderá criar a conta principal.");
+}
+
 // =====================================================================
 // 6. Banco: aplica migrations pendentes na inicialização
 //    (desligue com Database:MigrateOnStartup=false se preferir rodar manualmente)
