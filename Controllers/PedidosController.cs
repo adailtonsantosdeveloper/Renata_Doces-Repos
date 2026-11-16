@@ -114,7 +114,15 @@ namespace Renata_Doces.Controllers
             pedido.ValorTotal = pedido.Itens.Sum(i => i.PrecoUnitario * i.Quantidade);
 
             _context.Pedidos.Add(pedido);
-            await _context.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // Cliente ou produto foi excluído por outra pessoa entre a conferência e a gravação (FK).
+                return Conflict(new { mensagem = "Cliente ou produto foi alterado por outra pessoa. Atualize a tela e tente de novo." });
+            }
 
             var resposta = await Projetar(_context.Pedidos.AsNoTracking().Where(p => p.Id == pedido.Id))
                 .SingleAsync(cancellationToken);

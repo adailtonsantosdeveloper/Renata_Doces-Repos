@@ -77,16 +77,23 @@ namespace Renata_Doces.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteCliente(int id, CancellationToken cancellationToken)
         {
-            // O banco está configurado com exclusão em cascata: sem esta checagem,
-            // apagar o cliente apagaria também todo o histórico de pedidos dele.
+            // Mensagem amigável; o banco também bloqueia a exclusão (FK Restrict), mesmo numa corrida.
             if (await _context.Pedidos.AnyAsync(p => p.ClienteId == id, cancellationToken))
             {
                 return Conflict(new { mensagem = "Este cliente possui pedidos e não pode ser excluído." });
             }
 
-            var linhasAfetadas = await _context.Clientes
-                .Where(c => c.Id == id)
-                .ExecuteDeleteAsync(cancellationToken);
+            int linhasAfetadas;
+            try
+            {
+                linhasAfetadas = await _context.Clientes
+                    .Where(c => c.Id == id)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is DbUpdateException or Microsoft.Data.SqlClient.SqlException)
+            {
+                return Conflict(new { mensagem = "Este cliente possui pedidos e não pode ser excluído." });
+            }
 
             if (linhasAfetadas == 0)
             {

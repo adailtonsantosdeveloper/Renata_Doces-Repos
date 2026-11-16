@@ -1,290 +1,73 @@
-# 🔐 GUIA PASSO A PASSO - CONFIGURAR SECRETS NO GITHUB
+# Configuração de segredos e publicação (deploy)
 
-## 📍 PASSO 1: Acesse as Configurações do Repositório
+> **Regra de ouro:** nunca escreva senhas, connection strings ou tokens em arquivos do repositório
+> (ele é **público**). Segredos ficam só nas variáveis de ambiente do servidor, ou nos
+> *GitHub Secrets* se você criar um workflow de deploy.
 
-1. Acesse seu repositório: https://github.com/adailtonsantosdeveloper/Renata_Doces-Repos
-2. Clique em **Settings** (engrenagem no topo)
-3. No menu lateral esquerdo, clique em **Secrets and variables**
-4. Clique em **Actions**
+## O que o app lê
 
-Você verá a opção: **New repository secret**
+O app não conhece nomes como `AUTH_SENHA`: ele lê estas variáveis de ambiente.
 
----
+| Variável de ambiente | Obrigatória | Para que serve |
+|---|---|---|
+| `ConnectionStrings__DefaultConnection` | **Sim** | Conexão com o SQL Server |
+| `Auth__Usuario` + `Auth__Senha` | Recomendada | Cria a conta inicial na 1ª inicialização (senha com **mín. 10 caracteres**). Informe as duas ou nenhuma |
+| `Auth__CodigoConvite` | Recomendada | Código (mín. 10 caracteres) exigido para criar novas contas pela tela "Cadastre-se" |
+| `Auth__CookieSempreSeguro` | Opcional | `true` para forçar cookie Secure quando há https de ponta a ponta |
+| `DataProtection__KeysPath` | Opcional | Pasta persistente (volume) para as sessões sobreviverem a reinícios |
+| `Database__MigrateOnStartup` | Opcional | `false` para não aplicar migrations ao iniciar |
 
-## 🔧 ESCOLHA SUA HOSPEDAGEM
+> ⚠️ **Em servidor público, defina `Auth__Usuario`/`Auth__Senha` (ou `Auth__CodigoConvite`) antes
+> do primeiro acesso.** Sem isso, a primeira pessoa que abrir o site cria a conta de administrador.
 
-### OPÇÃO A: AZURE CONTAINER INSTANCES (Recomendado)
+Use valores **seus e únicos**: senha longa e aleatória gerada por um gerenciador de senhas.
+Não copie exemplos deste guia.
 
-Se usar Azure, você precisa de:
+## Opção A: Render (ou outro serviço que roda Docker)
 
-#### 1️⃣ REGISTRY_URL
-**O que é:** URL do seu Azure Container Registry
+Não precisa de GitHub Secrets. No painel do serviço, em **Environment**, cadastre as variáveis
+da tabela acima (`ConnectionStrings__DefaultConnection`, `Auth__Usuario`, `Auth__Senha`,
+`Auth__CodigoConvite`). O Render usa o `Dockerfile` do repositório e a porta da variável `PORT`
+(o app já respeita). O endereço `/health` serve para o health check.
 
-**Como obter:**
-```bash
-az acr show --name seu-registry --query loginServer -o tsv
-```
+## Opção B: Azure Container Instances com deploy automático (GitHub Actions)
 
-**Exemplo:** `seu-registry.azurecr.io`
+Hoje o repositório só tem o workflow `build.yml` (compila e valida o Dockerfile, sem secrets).
+**Não existe workflow de deploy**: é preciso criá-lo. Se for criar, estes são os secrets
+(menu **Settings → Secrets and variables → Actions → New repository secret**) e a que variável
+do app cada um deve ser ligado dentro do workflow:
 
-**Para adicionar no GitHub:**
-- Name: `REGISTRY_URL`
-- Value: `seu-registry.azurecr.io`
-- Clique em **Add secret**
+| Secret do GitHub | O que é | Vira, no container |
+|---|---|---|
+| `REGISTRY_URL`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` | Azure Container Registry (`az acr show` / `az acr credential show`) | usado só para publicar a imagem |
+| `AZURE_CREDENTIALS` | JSON do service principal (`az ad sp create-for-rbac ... --json-auth`) | usado só pelo login no Azure |
+| `AZURE_RESOURCE_GROUP` | Nome do resource group | usado só pelo deploy |
+| `DB_CONNECTION_STRING` | Connection string do Azure SQL | `ConnectionStrings__DefaultConnection` |
+| `AUTH_USUARIO` | Usuário da conta inicial | `Auth__Usuario` |
+| `AUTH_SENHA` | Senha da conta inicial (mín. 10 caracteres) | `Auth__Senha` |
+| `AUTH_CODIGO_CONVITE` | Código de convite para novas contas | `Auth__CodigoConvite` |
 
----
-
-#### 2️⃣ REGISTRY_USERNAME
-**O que é:** Usuário do Container Registry
-
-**Como obter:**
-```bash
-az acr credential show --name seu-registry --query username -o tsv
-```
-
-**Para adicionar no GitHub:**
-- Name: `REGISTRY_USERNAME`
-- Value: `seu-usuario`
-- Clique em **Add secret**
-
----
-
-#### 3️⃣ REGISTRY_PASSWORD
-**O que é:** Senha do Container Registry
-
-**Como obter:**
-```bash
-az acr credential show --name seu-registry --query "passwords[0].value" -o tsv
-```
-
-**Para adicionar no GitHub:**
-- Name: `REGISTRY_PASSWORD`
-- Value: `SuaSenhaLonga`
-- Clique em **Add secret**
-
----
-
-#### 4️⃣ AZURE_CREDENTIALS (O mais importante!)
-**O que é:** Chave de autenticação para Azure (formato JSON)
-
-**Como obter:**
-```bash
-az ad sp create-for-rbac --name "RenataDoces-CI" \
-  --role contributor \
-  --scopes /subscriptions/{seu-subscription-id}/resourceGroups/{seu-resource-group} \
-  --json-auth
-```
-
-Será retornado algo como:
-```json
-{
-  "clientId": "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",
-  "clientSecret": "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",
-  "subscriptionId": "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",
-  "tenantId": "xxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxx",
-  "activeDirectoryEndpointUrl": "https://login.microsoftonline.com",
-  "resourceManagerEndpointUrl": "https://management.azure.com/",
-  "activeDirectoryGraphResourceId": "https://graph.windows.net/",
-  "sqlManagementEndpointUrl": "https://management.core.windows.net:8443/",
-  "galleryEndpointUrl": "https://gallery.azure.com/",
-  "managementEndpointUrl": "https://management.core.windows.net/"
-}
-```
-
-**Para adicionar no GitHub:**
-- Name: `AZURE_CREDENTIALS`
-- Value: Cole **todo o JSON acima** (com quebras de linha)
-- Clique em **Add secret**
-
----
-
-#### 5️⃣ AZURE_RESOURCE_GROUP
-**O que é:** Nome do seu Resource Group no Azure
-
-**Como obter:**
-```bash
-az group list --query "[].name" -o tsv
-```
-
-**Exemplo:** `seu-resource-group`
-
-**Para adicionar no GitHub:**
-- Name: `AZURE_RESOURCE_GROUP`
-- Value: `seu-resource-group`
-- Clique em **Add secret**
-
----
-
-#### 6️⃣ DB_CONNECTION_STRING
-**O que é:** String de conexão do SQL Server
-
-**Formato para Azure SQL:**
-```
-Server=seu-servidor.database.windows.net,1433;Database=RenataDoces;User Id=admin@seu-servidor;Password=SenhaForteMuitoSegura123!;Encrypt=true;Connection Timeout=30;
-```
-
-**Como obter no Azure:**
-```bash
-az sql server show --resource-group seu-rg --name seu-servidor --query fullyQualifiedDomainName -o tsv
-```
-
-**Para adicionar no GitHub:**
-- Name: `DB_CONNECTION_STRING`
-- Value: Cole a string acima (com sua senha)
-- Clique em **Add secret**
-
----
-
-#### 7️⃣ AUTH_USUARIO
-**O que é:** Usuário admin inicial da aplicação
-
-**Exemplo:** `admin`
-
-**Para adicionar no GitHub:**
-- Name: `AUTH_USUARIO`
-- Value: `admin`
-- Clique em **Add secret**
-
----
-
-#### 8️⃣ AUTH_SENHA
-**O que é:** Senha admin inicial (mínimo 10 caracteres)
-
-**Exemplo:** `SenhaForteMuitoSegura123!`
-
-**Para adicionar no GitHub:**
-- Name: `AUTH_SENHA`
-- Value: `SenhaForteMuitoSegura123!`
-- Clique em **Add secret**
-
----
-
-### OPÇÃO B: RENDER.COM (Mais Simples)
-
-Se usar Render em vez de Azure:
-
-#### 1️⃣ RENDER_DEPLOY_WEBHOOK
-**O que é:** URL para dispara deploy automático
-
-**Como obter:**
-1. Acesse seu serviço em https://dashboard.render.com
-2. Clique em **Settings** (no seu serviço)
-3. Procure por **Deploy Hook** ou **API Token**
-4. Copie a URL do webhook
-
-**Para adicionar no GitHub:**
-- Name: `RENDER_DEPLOY_WEBHOOK`
-- Value: `https://api.render.com/deploy/srv-...`
-- Clique em **Add secret**
-
----
-
-#### 2️⃣ RENDER_SERVICE_ID
-**O que é:** ID do seu serviço no Render
-
-**Como obter:**
-Na URL de seu serviço: `https://dashboard.render.com/services/srv-xxxxx`
-
-**Para adicionar no GitHub:**
-- Name: `RENDER_SERVICE_ID`
-- Value: `srv-xxxxx`
-- Clique em **Add secret**
-
----
-
-#### 3️⃣ RENDER_SERVICE_URL
-**O que é:** URL pública de sua aplicação
-
-**Exemplo:** `https://renata-doces.onrender.com`
-
-**Para adicionar no GitHub:**
-- Name: `RENDER_SERVICE_URL`
-- Value: `https://renata-doces.onrender.com`
-- Clique em **Add secret**
-
----
-
-## ✅ VERIFICAR SECRETS ADICIONADOS
-
-Após adicionar todos, você deve ver uma lista assim:
+Formato da connection string do Azure SQL (troque os trechos entre `<>`):
 
 ```
-🔒 REGISTRY_URL
-🔒 REGISTRY_USERNAME
-🔒 REGISTRY_PASSWORD
-🔒 AZURE_CREDENTIALS
-🔒 AZURE_RESOURCE_GROUP
-🔒 DB_CONNECTION_STRING
-🔒 AUTH_USUARIO
-🔒 AUTH_SENHA
+Server=<servidor>.database.windows.net,1433;Database=<banco>;User Id=<usuario>;Password=<senha>;Encrypt=true;Connection Timeout=30;
 ```
 
-Clique em cada um para verificar se foi adicionado (não mostra o valor por segurança).
-
----
-
-## 🚀 APÓS CONFIGURAR OS SECRETS
-
-Faça um novo commit para disparar o CI/CD:
+Para obter o JSON de `AZURE_CREDENTIALS`:
 
 ```bash
-git commit --allow-empty -m "trigger: dispara CI/CD com secrets configurados"
-git push origin main
+az ad sp create-for-rbac --name "RenataDoces-CI" --role contributor \
+  --scopes /subscriptions/<id-da-assinatura>/resourceGroups/<resource-group> --json-auth
 ```
 
-Depois acesse: https://github.com/adailtonsantosdeveloper/Renata_Doces-Repos/actions
+Cole o JSON inteiro como valor do secret e **não o guarde em nenhum arquivo**. Segredos nunca
+devem aparecer em logs do workflow nem em commits.
 
-Você deve ver os workflows rodando:
-- ✅ build.yml → Build e push da imagem
-- ✅ deploy-azure.yml (ou deploy-render.yml) → Deploy automático
+## Teste local (Docker)
 
----
+Veja o `README.md`: os exemplos de `docker run` já passam as variáveis acima.
 
-## 🆘 TROUBLESHOOTING
+## Se um segredo vazar
 
-### Workflow falha com "Permission denied"
-- Verifique se o `AZURE_CREDENTIALS` JSON está completo
-- Confirme que o Service Principal tem permissões
-
-### "Registry authentication failed"
-- Verifique `REGISTRY_URL`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD`
-- Teste localmente:
-  ```bash
-  docker login seu-registry.azurecr.io -u seu-usuario -p sua-senha
-  ```
-
-### "Container already exists"
-- Remova o container antigo:
-  ```bash
-  az container delete --resource-group seu-rg --name renata-doces-app
-  ```
-
-### Deploy não dispara após push
-- Verifique em "Actions" se há erros
-- Confirme que os secrets estão no lugar certo (Settings → Secrets)
-- Reinicie o workflow manualmente
-
----
-
-## 🔐 BOAS PRÁTICAS
-
-✅ **Faça:**
-- Use senhas fortes (12+ caracteres, maiúsculas, números, símbolos)
-- Rotacione credenciais mensalmente
-- Use `--role contributor` apenas quando necessário
-
-❌ **NÃO Faça:**
-- Nunca commite secrets no repositório
-- Não compartilhe URLs de webhook
-- Não use a mesma senha para diferentes serviços
-
----
-
-## 📞 PRÓXIMOS PASSOS
-
-1. ✅ Configure todos os secrets acima
-2. ✅ Faça um push para testar
-3. ✅ Acompanhe em "Actions"
-4. ✅ Aplicação deve estar em produção automaticamente!
-
-**Seu CI/CD está pronto para deploy automático!** 🎉
+Troque-o imediatamente na origem (senha do SQL, credencial do Azure, código de convite) e
+atualize o servidor ou o GitHub Secret. Apagar o commit não basta: o histórico é público.
