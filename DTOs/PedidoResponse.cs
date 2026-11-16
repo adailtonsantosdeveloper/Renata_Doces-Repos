@@ -15,5 +15,9 @@ namespace Renata_Doces.DTOs
         string ClienteNome,
         DateTime DataPedido,
         decimal ValorTotal,
-        List<PedidoItemResponse> Itens);
+        List<PedidoItemResponse> Itens)
+    {
+        /// <summary>Código gerado pelo sistema (somente leitura).</summary>
+        public string Codigo => Renata_Doces.Common.Codigos.Pedido(Id);
+    }
 }

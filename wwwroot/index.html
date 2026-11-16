@@ -122,6 +122,11 @@
 
                 <form id="formPedido" class="card" novalidate>
                     <div class="field">
+                        <label for="pedidoCodigo">Código do pedido</label>
+                        <input id="pedidoCodigo" type="text" readonly tabindex="-1" class="readonly" aria-describedby="dicaCodigoPedido">
+                        <small id="dicaCodigoPedido" class="hint">Gerado automaticamente.</small>
+                    </div>
+                    <div class="field">
                         <label for="pedidoCliente">Cliente</label>
                         <select id="pedidoCliente" required></select>
                     </div>
@@ -167,6 +172,11 @@
                 <button type="button" class="btn btn-ghost" data-fechar>Fechar</button>
             </div>
             <div class="field">
+                <label for="clienteCodigo">Código</label>
+                <input id="clienteCodigo" type="text" readonly tabindex="-1" class="readonly" aria-describedby="dicaCodigoCliente">
+                <small id="dicaCodigoCliente" class="hint">Gerado automaticamente.</small>
+            </div>
+            <div class="field">
                 <label for="clienteNome">Nome</label>
                 <input id="clienteNome" type="text" maxlength="120" autocomplete="off" autocapitalize="words" required>
             </div>
@@ -199,8 +209,8 @@
             <div class="grid-2">
                 <div class="field">
                     <label for="produtoCodigo">Código</label>
-                    <input id="produtoCodigo" type="text" maxlength="30" placeholder="Ex.: BRIG01"
-                           autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" required>
+                    <input id="produtoCodigo" type="text" readonly tabindex="-1" class="readonly" aria-describedby="dicaCodigoProduto">
+                    <small id="dicaCodigoProduto" class="hint">Gerado automaticamente.</small>
                 </div>
                 <div class="field">
                     <label for="produtoPreco">Preço (R$)</label>

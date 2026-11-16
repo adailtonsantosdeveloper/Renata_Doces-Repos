@@ -320,3 +320,11 @@ input:focus, select:focus, textarea:focus {
 
 /* Trava a rolagem do fundo enquanto uma folha está aberta */
 html.no-scroll, body.no-scroll { overflow: hidden; }
+
+/* Campos de código: gerados pelo sistema, somente leitura */
+input.readonly, input[readonly] {
+    background: var(--surface-2, #f3ecee);
+    color: var(--muted);
+    font-weight: 600;
+    cursor: default;
+}

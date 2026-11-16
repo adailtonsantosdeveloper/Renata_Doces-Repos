@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Renata_Doces.Common;
 
 namespace Renata_Doces.Models
 {
@@ -15,5 +17,9 @@ namespace Renata_Doces.Models
         public string? Email { get; set; }
 
         public string? Endereco { get; set; }
+
+        /// <summary>Código gerado pelo sistema (somente leitura; não é uma coluna do banco).</summary>
+        [NotMapped]
+        public string Codigo => Codigos.Cliente(Id);
     }
 }
