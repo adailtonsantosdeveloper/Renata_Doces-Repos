@@ -36,6 +36,20 @@ namespace Renata_Doces.Data
                 .Property(pi => pi.PrecoUnitario)
                 .HasColumnType("decimal(18,2)");
 
+            // Cliente e produto com pedidos não podem ser apagados (e nunca levam pedidos junto em cascata):
+            // o histórico de vendas fica protegido também no banco, não só nos controllers.
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Cliente)
+                .WithMany()
+                .HasForeignKey(p => p.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<PedidoItem>()
+                .HasOne(i => i.Produto)
+                .WithMany()
+                .HasForeignKey(i => i.ProdutoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Contas de acesso: nome único (o SQL Server compara sem diferenciar maiúsculas/minúsculas).
             modelBuilder.Entity<Usuario>(entidade =>
             {

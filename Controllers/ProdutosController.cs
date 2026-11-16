@@ -90,16 +90,23 @@ namespace Renata_Doces.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteProduto(int id, CancellationToken cancellationToken)
         {
-            // O banco está configurado com exclusão em cascata: sem esta checagem,
-            // apagar o produto removeria os itens dos pedidos antigos e deixaria os totais inconsistentes.
+            // Mensagem amigável; o banco também bloqueia a exclusão (FK Restrict), mesmo numa corrida.
             if (await _context.PedidoItens.AnyAsync(i => i.ProdutoId == id, cancellationToken))
             {
                 return Conflict(new { mensagem = "Este produto já foi vendido e não pode ser excluído." });
             }
 
-            var linhasAfetadas = await _context.Produtos
-                .Where(p => p.Id == id)
-                .ExecuteDeleteAsync(cancellationToken);
+            int linhasAfetadas;
+            try
+            {
+                linhasAfetadas = await _context.Produtos
+                    .Where(p => p.Id == id)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is DbUpdateException or Microsoft.Data.SqlClient.SqlException)
+            {
+                return Conflict(new { mensagem = "Este produto já foi vendido e não pode ser excluído." });
+            }
 
             if (linhasAfetadas == 0)
             {
