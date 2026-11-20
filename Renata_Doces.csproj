@@ -10,8 +10,15 @@
 		<ServerGarbageCollector>false</ServerGarbageCollector>
 		<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
 		<TieredPGO>false</TieredPGO>
+		<!-- IIS (MonsterASP.NET): o app roda dentro do processo do IIS, o modo mais rápido e que usa menos memória -->
+		<AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
 		<SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Devolve memória ao sistema com mais frequência (plano gratuito: 256 MB) -->
+		<RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="5" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
