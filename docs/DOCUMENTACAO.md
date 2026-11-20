@@ -163,6 +163,8 @@ Nada secreto fica no código. Em produção use variáveis de ambiente (`__` no 
 | `Auth__CookieSempreSeguro` | Opcional | `true` força o cookie Secure quando há HTTPS de ponta a ponta |
 | `DataProtection__KeysPath` | Opcional | Pasta persistente das chaves de sessão |
 | `Database__MigrateOnStartup` | Opcional | `false` não aplica migrations ao iniciar (padrão: aplica) |
+| `Hospedagem__ConfiarEmProxy` | Opcional | Confia no IP/esquema informados pelo proxy. Padrão: sim fora do IIS, não no IIS |
+| `Hospedagem__ForcarHttps` | Opcional | `true` redireciona http para https |
 | `PORT` | Opcional | Porta HTTP do container (padrão 8080) |
 | `ASPNETCORE_ENVIRONMENT` | Opcional | `Development` ou `Production` |
 
@@ -185,6 +187,8 @@ O `appsettings.Development.json` guarda só a conexão com o LocalDB do computad
 5. Agendar `deploy/backup.sh` no cron.
 
 O compose recusa subir se `SA_PASSWORD`, `AUTH_USUARIO`, `AUTH_SENHA` ou `AUTH_CODIGO_CONVITE` estiverem vazios, para o site nunca ir ao ar com o cadastro aberto ao primeiro visitante.
+
+**Em hospedagem IIS (MonsterASP.NET).** Sem Docker: o app roda dentro do IIS (modo InProcess), com o banco SQL Server do provedor, variáveis de ambiente no painel e chaves de sessão em `private/keys`. Passo a passo em [`deploy/MONSTERASP.md`](../deploy/MONSTERASP.md).
 
 ## Operação
 
