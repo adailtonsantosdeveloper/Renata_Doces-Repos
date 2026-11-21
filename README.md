@@ -82,10 +82,6 @@ Abra `http://localhost:8080`, toque em **Cadastre-se** e crie a primeira conta. 
 
 Veja [`docs/DOCUMENTACAO.md`](docs/DOCUMENTACAO.md): arquitetura, banco, API, segurança, configuração e operação.
 
-## Hospedagem na MonsterASP.NET (IIS, sem Docker)
-
-O app também roda no IIS da MonsterASP.NET, com o banco SQL Server do próprio provedor. Veja [`deploy/MONSTERASP.md`](deploy/MONSTERASP.md): variáveis de ambiente no painel, publicação pelo Visual Studio ou por pacote do GitHub, HTTPS e limites dos planos.
-
 ## Servidor próprio (VPS)
 
 Para hospedar tudo (site, app e banco) num VPS pequeno, com HTTPS automático, limites de memória e backup, use o `docker-compose.yml` e siga o guia [`deploy/LEIA-ME.md`](deploy/LEIA-ME.md).
