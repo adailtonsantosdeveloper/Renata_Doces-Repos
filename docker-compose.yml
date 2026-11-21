@@ -46,7 +46,6 @@ services:
       Auth__Senha: ${AUTH_SENHA:?Defina AUTH_SENHA no arquivo .env}
       Auth__CodigoConvite: ${AUTH_CODIGO_CONVITE:?Defina AUTH_CODIGO_CONVITE no arquivo .env}
       Auth__CookieSempreSeguro: "true"  # o acesso é sempre por HTTPS (Caddy)
-      Hospedagem__ConfiarEmProxy: "true" # só o Caddy alcança o app: pode confiar no IP que ele informa
       DataProtection__KeysPath: /keys   # sessões continuam válidas após reiniciar
     mem_limit: 384m
     read_only: true                     # sistema de arquivos só de leitura (menos superfície de ataque)

@@ -50,37 +50,14 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 64 * 1024;
 });
 
-// Hospedagem no IIS (ex.: MonsterASP.NET): o app roda dentro do IIS, que aplica o limite abaixo.
-builder.Services.Configure<IISServerOptions>(options =>
+// Atrás do proxy do Render (ou de qualquer proxy reverso) o app precisa enxergar
+// o IP real e o esquema https para que o rate limit e o cookie Secure funcionem.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.MaxRequestBodySize = 64 * 1024;
-    options.AllowSynchronousIO = false;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
 });
-
-// O IIS define APP_POOL_ID; em Docker/Render a variável não existe.
-var emIis = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APP_POOL_ID"));
-
-// Atrás de um proxy reverso (Caddy, Render...) o app precisa enxergar o IP real e o esquema https para o
-// rate limit e o cookie Secure funcionarem. No IIS não há proxy na frente: confiar nesses cabeçalhos
-// deixaria qualquer visitante forjar o IP e burlar o limite de tentativas de login. Por isso o padrão é
-// "confiar" fora do IIS e "não confiar" no IIS; Hospedagem__ConfiarEmProxy força um dos dois.
-var confiarEmProxy = builder.Configuration.GetValue("Hospedagem:ConfiarEmProxy", !emIis);
-if (confiarEmProxy)
-{
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        options.KnownNetworks.Clear();
-        options.KnownProxies.Clear();
-    });
-}
-
-// Redireciona http para https (ligue com Hospedagem__ForcarHttps=true depois de ativar o HTTPS no painel).
-var forcarHttps = builder.Configuration.GetValue("Hospedagem:ForcarHttps", false);
-if (forcarHttps)
-{
-    builder.Services.AddHttpsRedirection(options => options.HttpsPort = 443);
-}
 
 // =====================================================================
 // 3. Banco de dados (SQL Server) com repetição automática em falhas transitórias
@@ -97,15 +74,9 @@ builder.Services.AddSingleton<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>
 // =====================================================================
 var dataProtection = builder.Services.AddDataProtection().SetApplicationName("RenataDoces");
 var keysPath = builder.Configuration["DataProtection:KeysPath"];
-if (string.IsNullOrWhiteSpace(keysPath) && emIis)
-{
-    // No IIS compartilhado o pool não tem perfil de usuário do Windows: sem uma pasta própria, as chaves
-    // ficam só na memória e todo mundo é deslogado a cada reinício. A pasta "private" fica ao lado de "wwwroot".
-    keysPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "private", "keys"));
-}
 if (!string.IsNullOrWhiteSpace(keysPath))
 {
-    // Mantém as sessões válidas entre reinícios (volume no Docker, pasta "private" no IIS).
+    // Opcional: mantém as sessões válidas entre reinícios se houver um disco persistente.
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 }
 
@@ -212,15 +183,7 @@ await UsuarioInicial.GarantirAsync(app.Services, app.Logger);
 // =====================================================================
 // 7. Pipeline HTTP (a ordem importa)
 // =====================================================================
-if (confiarEmProxy)
-{
-    app.UseForwardedHeaders();
-}
-
-if (forcarHttps)
-{
-    app.UseHttpsRedirection();
-}
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
